@@ -1,0 +1,1 @@
+Replace the named .jpg images described in README.md with your school's own photos. Keep filenames exactly the same.

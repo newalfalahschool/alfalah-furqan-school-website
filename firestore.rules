@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
+    // Admin role is granted by creating admins/{AUTH_UID} in Firestore Console after creating the user in Authentication.
+    match /admins/{uid} { allow read: if signedIn() && request.auth.uid == uid; allow write: if false; }
+    match /admissions/{docId} {
+      allow create: if request.resource.data.keys().hasAll(['studentName','parentName','grade','phone','type','status','createdAt'])
+        && request.resource.data.studentName is string && request.resource.data.studentName.size() <= 100
+        && request.resource.data.parentName is string && request.resource.data.parentName.size() <= 100
+        && request.resource.data.phone is string && request.resource.data.phone.size() <= 30
+        && request.resource.data.grade is string && request.resource.data.status == 'new';
+      allow read, update, delete: if isAdmin();
+    }
+    match /jobApplications/{docId} {
+      allow create: if request.resource.data.keys().hasAll(['fullName','subject','phone','type','status','createdAt'])
+        && request.resource.data.fullName is string && request.resource.data.fullName.size() <= 100
+        && request.resource.data.subject is string && request.resource.data.subject.size() <= 100
+        && request.resource.data.phone is string && request.resource.data.phone.size() <= 30
+        && request.resource.data.status == 'new';
+      allow read, update, delete: if isAdmin();
+    }
+    match /students/{docId} { allow read, write: if isAdmin(); }
+    match /teachers/{docId} { allow read, write: if isAdmin(); }
+    match /results/{docId} { allow read, write: if isAdmin(); }
+    match /attendance/{docId} { allow read, write: if isAdmin(); }
+    match /notices/{docId} { allow read: if true; allow write: if isAdmin(); }
+    match /gallery/{docId} { allow read: if true; allow write: if isAdmin(); }
+    match /siteSettings/{docId} { allow read: if true; allow write: if isAdmin(); }
+    match /{document=**} { allow read, write: if false; }
+  }
+}
